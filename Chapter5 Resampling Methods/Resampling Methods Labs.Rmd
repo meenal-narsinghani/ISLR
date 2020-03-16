@@ -6,13 +6,13 @@ output: html_notebook
 ---
 
 
-*Cross Validation*
+**Cross Validation**
 
 ***
 
 We will utilize the *Auto* dataset of ISLR package to compare different linear methods of varying flexibility to model mpg as function of horespower using CV approaches
 
-*Leave One Out Cross Validation (LOOCV)*
+***Leave One Out Cross Validation (LOOCV)***
 
 Loading the required packages
 ```{r}
@@ -78,7 +78,7 @@ Hence we can conclude that a linear model of degree 2 is suited for modeling the
 
 ***
 
-*K- fold Cross Validation (K = 10)*
+***K- fold Cross Validation (K = 10)***
 
 The concept remains the same as LOOCV, except that instead of leaving one observation out of the model fitting process, we leave out approx (n/k) observations. The model fitting process is repeated k times
 
@@ -141,7 +141,7 @@ summary(lm.out)
 
 We see that the 2 values are different. 
 
-**Does this mean the our boostrap estimate of standard error of cofficients is incorrect?**
+*Does this mean the our boostrap estimate of standard error of cofficients is incorrect?*
 No, this is not the case. Infact the bootstrap estimate is more accurate as it does not depend on any assumptions.
 
 To determine the SE of cofficients we need to estimate the unknown error(noise) variance. And estimation of this noise variance depends on the linear model being correct.
