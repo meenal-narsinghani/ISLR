@@ -1,0 +1,170 @@
+---
+title: "ISLR - Chapter 5"
+subtitle: "Resampling Methods - Labs"
+author: "Meenal Narsinghani"
+output: html_notebook
+---
+
+
+*Cross Validation*
+
+***
+
+We will utilize the *Auto* dataset of ISLR package to compare different linear methods of varying flexibility to model mpg as function of horespower using CV approaches
+
+*Leave One Out Cross Validation (LOOCV)*
+
+Loading the required packages
+```{r}
+require(ISLR)
+require(boot)   #For cv.glm function
+```
+
+Plot of mpg vs horsepower
+```{r}
+plot(mpg ~ horsepower, data = Auto)
+```
+
+Using glm() to model mpg as a function of horsepower
+```{r}
+glm.fit <- glm(mpg ~ horsepower, data = Auto)
+cv.glm(Auto, glm.fit)$delta   #Default value of k = n i.e. LOOCV
+```
+
+cv.glm is bit slow even for a linear model as it fits any method n times.
+However, just for linear model we have a direct simple formula for comuting the CV estimate of test error without having to fit the model n times.
+
+This formula is given as -
+
+    LOOCV(n) = 1/n sum{[(y_i - y_hat_i)/(1-h_i)]^2}
+    
+We will write a user-defined function to compute test error estimate using this formula
+```{r}
+loocv <- function(fit)
+{
+  h <- lm.influence(fit)$h
+  mean((residuals(fit)/(1-h))^2)
+}  
+```
+
+```{r}
+(test_err <- loocv(glm.fit))
+```
+
+In the above code blocks, we estimated the test error by fitting a linear model on mpg using linear horespower term.
+
+Now we will use LOOCV to compare linear models of varying degrees.
+
+```{r}
+cv.error <- rep(0,5)
+degree <- 1:5
+
+for(i in degree)
+{
+  glm.fit <- glm(mpg ~ poly(horsepower, i), data = Auto)
+  cv.error[i] <- loocv(glm.fit)
+}
+```
+
+Plot of LOOCV test error estimate against linear model of varying flexibilities
+```{r}
+plot(x = degree, y = cv.error, type = 'b', col = 'blue')
+```
+
+The above plot shows that linear model of degree 1 does a poor job. The test error estimates drops down for degree 2 model. Inclusion of higher degree terms do not make much difference.
+
+Hence we can conclude that a linear model of degree 2 is suited for modeling the relationship between mpg and horsepower
+
+
+***
+
+*K- fold Cross Validation (K = 10)*
+
+The concept remains the same as LOOCV, except that instead of leaving one observation out of the model fitting process, we leave out approx (n/k) observations. The model fitting process is repeated k times
+
+
+We will reuse the above code block with a small change. We will set the argument "k" to 10 in the cv.glm()
+
+```{r}
+cv.error10 <- rep(0,5)
+for (i in degree)
+{
+  glm.fit <- glm(mpg ~ poly(horsepower, i), data = Auto)
+  cv.error10[i] <- cv.glm(Auto, glm.fit, K = 10)$delta[1]
+}
+```
+
+Comparing the plot of test error estimate from LOOCV and K-fold CV approach
+```{r}
+plot(x = degree, y = cv.error, type = 'b', col = 'blue')
+lines(degree, cv.error10, type = "b", col = "darkred")
+```
+
+As we observe there is not much difference in the outputs of the 2 methods.
+
+Generally speaking, we use 10-fold (or 5-fold) CV approach as it is computationally less expensive than LOOCV and it tends to produce more stable measure. 
+
+
+***
+
+***
+
+*Bootstrap*
+
+***
+
+We will illustrate the use of Bootstrap to estimate the standard error of the coefficients estimated by the linear regression method
+
+Here we use the bootstrap approach in order to assess the variability of the estimates for β0 and β1, the intercept and slope terms for the linear regression model that uses horsepower to predict mpg in the Auto data set.
+
+
+```{r}
+boot.fn <- function(data, index)
+{
+  return(coef(lm(mpg ~ horsepower, data = data, subset = index)))
+}
+```
+
+Calling boot() function to repeat the model fit process on 1000 bootstrapped samples
+```{r}
+boot(data = Auto, boot.fn, R = 1000)
+```
+
+The output indicates that the bootstrap estimate of the standard error of Beta0 = 0.848 and that of Beta1 = 0.0074.
+
+We can compare these values with the one produced by lm function by executing summary function on its output
+
+```{r}
+lm.out <- lm(mpg ~ horsepower, data = Auto)
+summary(lm.out)
+```
+
+We see that the 2 values are different. 
+
+**Does this mean the our boostrap estimate of standard error of cofficients is incorrect?**
+No, this is not the case. Infact the bootstrap estimate is more accurate as it does not depend on any assumptions.
+
+To determine the SE of cofficients we need to estimate the unknown error(noise) variance. And estimation of this noise variance depends on the linear model being correct.
+
+As we have seen that the relationship between mpg and horsepower is not linear. So the residuals from linear model will be inflated and so will be the estimated error variance.
+
+To validate this, we will now fit a quardatic model and compare the estimates from 2 methods
+
+
+```{r}
+set.seed(123)
+boot.fn2 <- function(data,index)
+{
+  return(coef(lm(mpg ~ poly(horsepower,2), data = data[index,])))
+}
+```
+
+```{r}
+boot(Auto, boot.fn2, R = 10000)
+```
+
+```{r}
+lm.out2 <- lm(mpg ~ poly(horsepower,2), data = Auto)
+summary(lm.out2)$coef
+```
+
