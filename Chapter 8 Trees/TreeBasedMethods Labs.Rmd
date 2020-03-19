@@ -1,12 +1,13 @@
 ---
 title: 'Chapter 8: Tree-based Methods'
+subtitle: 'Labs'
 output:
   html_document:
     df_print: paged
 ---
 
 Loading the required packages
-```{r}
+```{r error=FALSE, warning=FALSE}
 require(ISLR)
 require(tree)
 require(ggplot2)
@@ -22,7 +23,8 @@ attach(Carseats)
 We will plot the distribution of Sales
 ```{r}
 ggplot(Carseats, aes(x = Sales)) +
-  geom_histogram(position = "dodge", binwidth = 2)
+  geom_histogram(position = "dodge", binwidth = 2) +
+    theme_classic()
 ```
 
 We will create a binary response variable `High` based on Sales and our goal would be to build a model to predict this variable
@@ -32,54 +34,89 @@ Carseats$High <- ifelse(Carseats$Sales > 8, "Yes", "No")
 Carseats$High <- as.factor(Carseats$High)
 ```
 
-We will now fit our tree model on the dataset to model response variable `High`
+***
 
+**Decision Trees**
+
+***
+
+We will now fit our tree model on the dataset to model response variable `High`
 ```{r}
-tree.fit <- tree(High~.-Sales, data = Carseats, y = TRUE)
+tree.fit <- tree(High ~ .-Sales, data = Carseats, y = TRUE)
 summary(tree.fit)
 table(tree.fit$y, Carseats$High)
 ```
 
+To get a detailed summary of tree, we can simply print the tree model object
+```{r}
+(tree.fit)
+```
+
+Plotting the graphical representation of the tree
 ```{r}
 plot(tree.fit)
-text(tree.fit, pretty = 0)
+text(tree.fit, pretty = 0,cex = 0.6)
 ```
+***
+
+**Estimating the test error rate**
 
 We will split the dataset into train and test. 
 We will use train set to fit the model and then evaluate its performance using test set
 ```{r}
 set.seed(1011)
+
 train_idx <- sample(1:nrow(Carseats), size = 250)
 
 train.tree <- tree(High ~. - Sales, data = Carseats[train_idx,])
-plot(train.tree); text(train.tree, pretty = 0)
+
+plot(train.tree); text(train.tree, pretty = 0, cex = 0.6)
 summary(train.tree)
 ```
 
 Predict the response variable on the test dataset
 ```{r}
-pred <- predict(train.tree, Carseats[-train_idx,], type = "class")
+pred <- predict(train.tree, Carseats[-train_idx,], type = "class")  
+#We want the class label, so using type = "class"
+
 table(Carseats$High[-train_idx], pred)
 ```
 
-#Miss-classification ratw
+*Miss-classification rate*
 ```{r}
-(10+20)/(78+10+20+42)
+(27+20)/(58+27+20+45)
 ```
+
+***
+
+**Tree Pruning**
 
 We will now use Cross validation to determine the optimal depth of the tree
 ```{r}
-cv.tree.model <- cv.tree(train.tree, FUN = prune.misclass)
+#We want to prune the tree that was fully grown using the Training set
+cv.tree.model <- cv.tree(train.tree, FUN = prune.misclass) 
 cv.tree.model
+```
+The summary above tells us for each size of the tree, what is the mean deviance value and what was the cost complexity parameter corresponding to it.
+
+The mean deviance drops initially as the tree reduces in size and then it begins to increase as tree becomes more and more simple
+
+```{r}
 plot(cv.tree.model)
 ```
 
-Based on the above plot, we will select  a tree with size 13
+Based on the above plot, we will select a tree with size 16 i.e. corresponding to the minimum misclassification error
+
+```{r}
+cv.result <- as.data.frame(cbind(cv.tree.model$size, cv.tree.model$dev))
+colnames(cv.result) <- c("size", "dev")
+tree_size <- cv.result$size[cv.result$dev == min(cv.result$dev)]
+```
 
 We will fit the tree(of size 13) on the full training set
 ```{r}
-prune.tree.train <- prune.misclass(train.tree, best = 13)
-plot(prune.tree.train); text(prune.tree.train, pretty = 0)
+prune.tree.train <- prune.misclass(train.tree, best = tree_size)  #best = #of terminal nodes
+plot(prune.tree.train); text(prune.tree.train, pretty = 0, cex = 0.6)
 ```
 
 Fit it on test dataset
@@ -90,15 +127,150 @@ table(prune.tree.pred, Carseats$High[-train_idx])
 ```
 Missclassification rate
 ```{r}
-((17+8)/(80+17+8+45))
+((18+26)/(59+18+26+47))
 ```
+We observe that the misclassification rate corresponding to the pruned tree is lower than that of the full-grown tree.
 
---------------------------
 ***
 
-====================
+***
+
 **Random Forest and Boosting**
-====================
---------------------------
+
+***
+
+We will now illustrate the application of Random Forests and Boosting. 
+The packages used are - randomForest and gbm. Here we will use the **Boston Housing** dataset available in the `MASS` package
+
+```{r error=FALSE, warning=FALSE}
+require(randomForest)
+require(gbm)
+require(MASS)
+```
+
+**Random Forest**
+
+The concept of Random Forest is - We grow many full-size trees (having high variance and low bias) and we then average the outcome of these trees to make the prediction (thereby redcuing the variance)
+
+```{r}
+set.seed(101)
+dim(Boston)
+
+train_idx <- sample(nrow(Boston), 300)
+
+```
+
+We will now fit random forest to model the response variable `medv` - the median housing values
+
+```{r}
+rf.boston <- randomForest(medv ~ ., data = Boston, subset = train_idx)
+rf.boston
+```
+
+From the above summary, we see that 500 bushy trees were built on the training subset.
+The Out-Of-Bag(OOB) mean sqaured residuals value is also displayed in the summary.
+This is sort of the de-biased estimate of the prediction error.
+
+The number of variables avaiable at each split(mtry) = 4 out of the 13 predictor variables.
+
+**Slecting optimal value for mtry**
+
+The only tuning parameter in random forest is `mtry` i.e number of predictors available for each split
+
+```{r}
+oob.err <- double(13)
+test.err <- double(13)
+
+for(mtry in 1:13)
+{
+  rf.fit <- randomForest(medv ~ ., data = Boston, subset = train_idx, mtry = mtry , ntree = 400)
+  oob.err[mtry] <- rf.fit$mse[400]
+  test.fit <- predict(rf.fit, Boston[-train_idx,])
+  test.err[mtry] <- with(Boston[-train_idx,], mean((medv-test.fit)^2))
+  cat(mtry," ")
+}
+```
+
+```{r}
+matplot(1:mtry, cbind(test.err, oob.err), pch = 19, col = c("red","blue"), type = "b", ylab = "MSE")
+legend("topright", legend = c("Test", "OOB"), pch = 19, col = c("red", "blue"))
+```
+We can see that the test error is minimum around mtry = 6. 
+
+***
+
+***
+
+**Boosting**
+
+***
+
+Unlike random forest, Bosoting grows the tree sequentially on a modified training set rather than on bootstrapped training sets
+
+```{r}
+require(gbm)
+```
+
+```{r}
+boost.boston <- gbm(medv ~., 
+                    data = Boston[train_idx,], 
+                    distribution = "gaussian",
+                    n.trees = 10000,
+                    shrinkage = 0.01,
+                    interaction.depth = 4)
+summary(boost.boston)
+```
+The 2 most important variables are `lstat` and `rm`
+We can view the partial dependence plot for these 2 variables.
+
+```{r}
+plot(boost.boston, i = "lstat")
+```
+This plot roughly shows that higher the proportion of lower status people in suburb, lower is the value of the housing price.
+
+```{r}
+plot(boost.boston, i = "rm")
+```
+This plot is quite intuitive. Higher the average number of rooms, higher is the housing price.
+
+
+There are 3 parameters to be considered for boosting.
+
+* number of trees
+* interaction depth
+* shrinkage parameter
+
+We can use CV to determine the optimal number of trees as well as shrinkage parameter
+
+Here, we will look at the test performance as a function of number of trees.
+
+
+```{r}
+n.trees <- seq(from = 100, to = 10000, by  = 100)
+test.pred <- predict(boost.boston, newdata = Boston[-train_idx,], n.trees = n.trees)
+dim(test.pred)
+#For each of the 206 observations, 100 different prediction values are produced
+```
+
+```{r}
+test.err <- with(Boston[-train_idx,], apply((test.pred - medv)^2, 2, mean ))
+#test.err is 100 different MSE's corresponding 100 different values of n.trees
+```
+
+```{r}
+plot(n.trees, test.err, 
+     pch = 19, type = "b",
+     ylab = "MSE", xlab = "Number of trees(n.trees)",
+     main = "Boosting Test Error vs Numbe of trees in boosted ensemble")abline(h = min(test.err))
+```
+
+The plot shows the test error as a function of number of trees. The plot seems to level off beyond n.trees = 2000. It slightly increases near n.treee = 9000, which may indicate overfitting.
+
+***
+
+***
+
+
+
 
 
