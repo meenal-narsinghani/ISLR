@@ -261,7 +261,7 @@ test.err <- with(Boston[-train_idx,], apply((test.pred - medv)^2, 2, mean ))
 plot(n.trees, test.err, 
      pch = 19, type = "b",
      ylab = "MSE", xlab = "Number of trees(n.trees)",
-     main = "Boosting Test Error vs Numbe of trees in boosted ensemble")abline(h = min(test.err))
+     main = "Boosting Test Error vs Numbe of trees in boosted ensemble")
 ```
 
 The plot shows the test error as a function of number of trees. The plot seems to level off beyond n.trees = 2000. It slightly increases near n.treee = 9000, which may indicate overfitting.
