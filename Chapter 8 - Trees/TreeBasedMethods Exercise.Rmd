@@ -1,0 +1,81 @@
+---
+title: "ISLR - Chapter 8 (Tree Based Methods)"
+subtitle: "Exercise (Applied)"
+author: "Meenal Narsinghani"
+output: html_notebook
+---
+
+7. In the lab, we applied random forests to the Boston data using mtry=6 and using ntree=25 and ntree=500. Create a plot displaying the test error resulting from random forests on this data set for a more comprehensive range of values for mtry and ntree. You can model your plot after Figure 8.10. Describe the results obtained.
+
+```{r}
+require(MASS)
+require(randomForest)
+```
+
+```{r}
+data("Boston")
+dim(Boston)  
+```
+*We have a total of 13 predictor variables.*
+
+Splitting the data into train and test
+```{r}
+set.seed(123)
+train_idx <- sample(1:nrow(Boston), 300)
+```
+
+Fitting the random forest by building different number of trees - 1, 100, 200,..500
+For each of these iterations let us try differnt values of mtry - p, p/2, sqrt(p)
+
+```{r}
+ntrees <- c(1, 100, 200, 300, 400, 500)
+mtry <- c(13, 6, 4)
+test.err <- matrix(data = NA, nrow = 3, ncol = 6)
+test.err[1,2] <- 2
+
+i<- 1
+
+for(p in mtry)
+{
+  j <- 1  
+  for(trees in ntrees)
+  {
+    rf.fit <- randomForest(medv ~., data = Boston[train_idx,],
+                           ntree = trees,
+                           mtry = p)
+  
+    test.pred <- predict(rf.fit, newdata = Boston[-train_idx,])
+  
+    test.err[i,j] <- mean((test.pred - Boston$medv[-train_idx])^2)
+    j <- j + 1
+  }
+  i <- i + 1    
+}
+
+test.err <- as.data.frame(test.err) 
+```
+
+```{r}
+
+test.err.df = t(test.err)
+
+matplot(x = c(1,100,200,300,400,500),
+        y = cbind(test.err.df[,1], test.err.df[,2], test.err.df[,3]), 
+        pch = 19, col = c("red", "blue", "green"), type = "b", 
+        xlab = "Number of trees", ylab = "MSE")
+legend("topright", legend = c("mtry = 13", "mtry = 6", "mtry = 4"), pch = 19, col = c("red", "blue", "green"))
+```
+
+***
+
+8. In the lab, a classification tree was applied to the Carseats data set after converting Sales into a qualitative response variable. Now we will seek to predict Sales using regression trees and related approaches, treating the response as a quantitative variable.
+
+(a) Split the data set into a training set and a test set.
+
+(b) Fit a regression tree to the training set. Plot the tree, and interpret the results. What test MSE do you obtain?
+
+(c) Use cross-validation in order to determine the optimal level of tree complexity. Does pruning the tree improve the test MSE?
+
+(d) Use the bagging approach in order to analyze this data. What test MSE do you obtain? Use the importance() function to determine which variables are most important.
+
+(e) Use random forests to analyze this data. What test MSE do you obtain? Use the importance() function to determine which variables are most important. Describe the effect of m, the number of variables considered at each split, on the error rate obtained.
