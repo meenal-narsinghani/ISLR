@@ -1,0 +1,104 @@
+---
+title: 'Chapter 8: Tree-based Methods'
+output:
+  html_document:
+    df_print: paged
+---
+
+Loading the required packages
+```{r}
+require(ISLR)
+require(tree)
+require(ggplot2)
+require(dplyr)
+```
+
+Loading the dataset - Carseats
+```{r}
+attach(Carseats)
+```
+
+
+We will plot the distribution of Sales
+```{r}
+ggplot(Carseats, aes(x = Sales)) +
+  geom_histogram(position = "dodge", binwidth = 2)
+```
+
+We will create a binary response variable `High` based on Sales and our goal would be to build a model to predict this variable
+
+```{r}
+Carseats$High <- ifelse(Carseats$Sales > 8, "Yes", "No")
+Carseats$High <- as.factor(Carseats$High)
+```
+
+We will now fit our tree model on the dataset to model response variable `High`
+
+```{r}
+tree.fit <- tree(High~.-Sales, data = Carseats, y = TRUE)
+summary(tree.fit)
+table(tree.fit$y, Carseats$High)
+```
+
+```{r}
+plot(tree.fit)
+text(tree.fit, pretty = 0)
+```
+
+We will split the dataset into train and test. 
+We will use train set to fit the model and then evaluate its performance using test set
+```{r}
+set.seed(1011)
+train_idx <- sample(1:nrow(Carseats), size = 250)
+
+train.tree <- tree(High ~. - Sales, data = Carseats[train_idx,])
+plot(train.tree); text(train.tree, pretty = 0)
+summary(train.tree)
+```
+
+Predict the response variable on the test dataset
+```{r}
+pred <- predict(train.tree, Carseats[-train_idx,], type = "class")
+table(Carseats$High[-train_idx], pred)
+```
+
+#Miss-classification ratw
+```{r}
+(10+20)/(78+10+20+42)
+```
+
+We will now use Cross validation to determine the optimal depth of the tree
+```{r}
+cv.tree.model <- cv.tree(train.tree, FUN = prune.misclass)
+cv.tree.model
+plot(cv.tree.model)
+```
+
+Based on the above plot, we will select  a tree with size 13
+
+We will fit the tree(of size 13) on the full training set
+```{r}
+prune.tree.train <- prune.misclass(train.tree, best = 13)
+plot(prune.tree.train); text(prune.tree.train, pretty = 0)
+```
+
+Fit it on test dataset
+
+```{r}
+prune.tree.pred <- predict(prune.tree.train, Carseats[-train_idx,], type = "class")
+table(prune.tree.pred, Carseats$High[-train_idx])
+```
+Missclassification rate
+```{r}
+((17+8)/(80+17+8+45))
+```
+
+--------------------------
+***
+
+====================
+**Random Forest and Boosting**
+====================
+--------------------------
+
+
