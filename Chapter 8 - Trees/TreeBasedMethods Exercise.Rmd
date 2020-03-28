@@ -68,16 +68,76 @@ matplot(x = c(1,100,200,300,400,500),
 legend("topright", legend = c("mtry = 13", "mtry = 6", "mtry = 4"), pch = 19, col = c("red", "blue", "green"))
 ```
 
+Fitting random forest using differet values for mtry, we notice that when mtry = 4 [~ sqrt(13)], the estimate for test error is lower than when mtry = 13 or 13/2 irrespective of the number of fitted trees.
+
+For all the values of mtry, the test error estimate levels at about 200 trees.
+
+
 ***
 
 8. In the lab, a classification tree was applied to the Carseats data set after converting Sales into a qualitative response variable. Now we will seek to predict Sales using regression trees and related approaches, treating the response as a quantitative variable.
 
+```{r}
+data("Carseats")
+dim(Carseats)
+```
+
 (a) Split the data set into a training set and a test set.
+```{r}
+set.seed(100)
+train_idx <- sample(1:nrow(Carseats), 0.5*nrow(Carseats))
+train_data <- Carseats[train_idx, ]
+test_data <- Carseats[-train_idx, ]
+```
+
 
 (b) Fit a regression tree to the training set. Plot the tree, and interpret the results. What test MSE do you obtain?
+```{r}
+tree_fit <- tree(Sales ~., data = train_data)
+
+plot(tree_fit)
+text(tree_fit, pretty = 0,cex = 0.6)
+
+summary(tree_fit)
+```
+
+```{r}
+pred_test <- predict(tree_fit, newdata = test_data)
+test_mse <- mean((test_data$Sales - pred_test)^2)
+test_mse
+```
 
 (c) Use cross-validation in order to determine the optimal level of tree complexity. Does pruning the tree improve the test MSE?
+```{r}
+cv_tree <- cv.tree(tree_fit, FUN = prune.tree) 
+cv_tree 
+```
+```{r}
+plot(cv_tree)
+```
+
+```{r}
+cv_result <- as.data.frame(cbind(cv_tree$size, cv_tree$dev))
+colnames(cv_result) <- c("size", "dev")
+tree_size <- cv_result$size[cv_result$dev == min(cv_result$dev)]
+```
+
+```{r}
+prune_tree <- prune.tree(tree_fit, best = tree_size[2])  #best = #of terminal nodes
+plot(prune_tree); text(prune_tree, pretty = 0, cex = 0.6)
+```
+```{r}
+prune_pred <- predict(prune_tree, newdata = test_data)
+prune_test_mse <- mean((test_data$Sales - prune_pred)^2)
+prune_test_mse
+
+```
+
 
 (d) Use the bagging approach in order to analyze this data. What test MSE do you obtain? Use the importance() function to determine which variables are most important.
+```{r}
+
+```
+
 
 (e) Use random forests to analyze this data. What test MSE do you obtain? Use the importance() function to determine which variables are most important. Describe the effect of m, the number of variables considered at each split, on the error rate obtained.

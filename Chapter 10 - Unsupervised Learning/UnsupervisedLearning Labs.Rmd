@@ -1,0 +1,143 @@
+---
+title: "ISLR - Chapter 10"
+subtitle: "Unsupervised Learning"
+output: html_notebook
+---
+
+**Unsupervised Methods:**
+
+* **Principal Components**
+* **K-means Clustering**
+* **Hierarchical Clustering**
+
+***
+
+#### **1. Principal Component Analysis**
+
+***
+
+```{r, error=FALSE, warning=FALSE, echo=FALSE}
+require(dplyr)
+```
+
+We will use the USArrests data to illustrate the implementation of Principal Component method
+```{r}
+data("USArrests")
+glimpse(USArrests)
+```
+
+We will now check for the means and variances of the variables and decide if standarization is required or not
+```{r}
+apply(USArrests, 2, mean)
+apply(USArrests, 2, var)
+```
+We notice that the means and variances are quite different. And since in Principal Component method we aim to identify the linear combination of variables that maximizes the variance, the result will be dominated by the variable that has the greatest variance.
+
+So, we will standardize the variables (i.e. bring the variance of all variables to 1 unit) before implementing the method.
+
+This can be achieved by setting the `scale` argument of the `prcomp` function to **TRUE**
+
+```{r}
+pca_res <- prcomp(USArrests, scale = TRUE)
+pca_res
+```
+The standard deviation displayed in the result is the standard deviation of each of the 4 principal components. (Remember that the total number of Principal Components for a dataset = MIN[n-1, p])
+
+Notice that the standard deviations always decreases.
+
+The **Rotation** in the above summary is nothing but the loadings.
+
+The **first principal component** is loaded equally on all the 3 kinds of crime. And it has got a lower loading on `UrbanPop`
+
+*So the first principal component esentially measure the average of the 3 crimes in any state*
+
+The **second principal component** is heavily loaded on `UrbanPop`
+
+**Visualizing the Principal Components**
+```{r}
+biplot(pca_res, scale = 0, cex = 0.6)
+```
+
+*Interpretation*
+Since the loadings were negative for the first principal component, states with a negative values have high crime rate (like Michigan, Nevada, California)
+
+Similarly, the second principal component had a negative loading corresponding to UrbanPop. Hence states like New Jersey, Hawaii has high percentage of urban population.
+
+
+***
+
+***
+
+#### **2. K-means clustering**
+
+***
+We will work with a simulated 2-dimensional data to illustrate the application of k-means clustering method.
+
+```{r}
+set.seed(111)
+data_points <- matrix(rnorm(100*2), 100, 2) #To generate 100 pairs of data points
+
+#We will now generate 4 pairs of means to represent 4 clusters
+means <- matrix(rnorm(8, sd = 4), 4, 2)
+
+#Assigning each pair to a cluster and then shifting the point by the corresponding cluster mean value
+cluster_assign <- sample(1:4, 100, replace = T)
+
+data_points <- data_points + means[cluster_assign, ]
+
+#Visualizing the data
+plot(data_points, col = cluster_assign, pch = 19)
+```
+
+Now, the cluster_assign store the true cluster numbers for each data point.
+
+We will now run k-means algorithm on this dataset. The true clsuter assignment will be hidden from the algorithm.
+
+*Determining the optimal value of k -* * **Elbow Curve Method** *
+```{r}
+tot_withinss <- rep(0,10)
+for(k in 1:10)
+{
+  kmeans_res <- kmeans(data_points, centers = k, nstart = 25)
+  tot_withinss[k] <- kmeans_res$tot.withinss
+}
+
+plot(x = seq(1,10, by = 1), y = tot_withinss, type = 'b', pch = 19, col = "darkblue", xlab = "Number of clusters")
+```
+
+Based on the plot above, we will select k = 4
+
+```{r}
+kmeans_out <- kmeans(data_points, centers = 4, nstart = 20)
+kmeans_out
+```
+
+The output of k-means provides us with a number of metrics. 
+
+* - It displays the cluster centers
+* - Cluster assignment for the input dataset
+* - Within sum of squares for each cluster: smaller the value more homogeneous the cluster is
+
+*Visualizing the output of k-means*
+We will compare the cluster results from k-means with the the true cluster assignments
+```{r}
+plot(data_points, col = kmeans_out$cluster, pch = 1, cex = 3) ##Hollow circles
+points(data_points, col = cluster_assign, pch = 19)
+points(data_points, col = c(4,3,2,1)[cluster_assign], pch = 19)
+```
+We can see that k-means did a pretty good job in correctly assigning points to the clusters.
+
+
+
+***
+
+***
+
+#### **3. Hierarchical Clustering **
+
+***
+
+```{r}
+
+```
+
