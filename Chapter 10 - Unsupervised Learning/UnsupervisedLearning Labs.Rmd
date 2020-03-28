@@ -136,8 +136,56 @@ We can see that k-means did a pretty good job in correctly assigning points to t
 #### **3. Hierarchical Clustering **
 
 ***
+We will use the same simulated dataset used to perform k-means clustering.
+
+We use the function `hclust()` that accepts 2 parameters, one is the `distance matrix` and the other is the linkage `method`.
 
 ```{r}
+hclust_complete <- hclust(dist(data_points), method = "complete")
+#dist(data_points) will generate 100*100 matrix to store the pairwise distance values
+
+#Lets visualize the output dendogram
+plot(hclust_complete, labels = cluster_assign)
+```
+
+Since we know that there are 4 clusters in the data, the dendogram above infact shows the presence of 4 major cluster (if we cut the dendogram at height between 5 and 10)
+
+Recall that **complete** linkage uses the maximum pairwise-distance between points in 2 clusters.
+
+We will now use other linkage methods:
+
+* Single: minimum pairwise distance
+* Average: Averages the pairwise-distances between 2 clsuters
+* 
+
+```{r}
+hclust_single <- hclust(dist(data_points), method = "single")
+plot(hclust_single)
 
 ```
 
+As expected, single linkage produced long, stringy trees. The 4 clsuters are not really prominent in the above dendogram.
+
+```{r}
+hclust_average <- hclust(dist(data_points), method = "average")
+plot(hclust_average)
+```
+Average linkage, like complete method, produces balanced trees. The 4 clusters are quite visible from the above dendogram.
+
+
+*Comparing the result from* `complete` *linkage method with the* **true clsuter** *assignments*
+```{r}
+hclust_complete_cut <- cutree(hclust_complete, k = 4)
+table(hclust_complete_cut, cluster_assign)
+```
+
+The table above shows that only 1 observation has been assigned to a wrong cluster.
+
+*Comparing the result from* `complete` *linkage method with the* **k-means clsuter assignments**
+```{r}
+table(hclust_complete_cut, kmeans_out$cluster)
+```
+
+***
+
+***
