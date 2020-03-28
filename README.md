@@ -10,5 +10,5 @@ Labs: https://meenal-narsinghani.github.io/ISLR/Chapter%208%20-%20Trees/TreeBase
 
 Chapter 10: Unsupervised Learning
 
-Labs: 
+Labs: https://meenal-narsinghani.github.io/ISLR/Chapter%2010%20-%20Unsupervised%20Learning/UnsupervisedLearning%20Labs.nb.html
 
